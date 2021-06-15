@@ -17,69 +17,45 @@ public final class Knapsack {
     }
     
     func findMaxKilometres() -> Int {
+		let drinkKnapsackTable = knapsackTable(for: drinks)
+		let foodsKnapsackTable = knapsackTable(for: foods)
+		
+		let drinkMaxDistances = drinkKnapsackTable[drinks.count]
+		let foodsMaxDistances = foodsKnapsackTable[foods.count]
+		
 		var maxDistance = 0
-		
-		// drinks and food, sorted by higher scrore (distance/weight)
-		let optimalSortedDrinks: [Supply] = drinks.sorted {
-			$0.value/$0.weight > $1.value/$1.weight
+		for weigth in 1 ..< maxWeight {
+			let maxDistanceWithDrink = drinkMaxDistances[weigth]
+			let maxDistanceWithFoods = foodsMaxDistances[maxWeight - weigth]
+			let availableMaxDistance = min(maxDistanceWithDrink, maxDistanceWithFoods)
+			if maxDistance < availableMaxDistance {
+				maxDistance = availableMaxDistance
+			}
 		}
-		let optimalSortedFoods: [Supply] = foods.sorted {
-			$0.value/$0.weight > $1.value/$1.weight
-		}
+
+		return maxDistance
+    }
+	
+	func knapsackTable(for supplies: [Supply]) -> [[Int]] {
+		// init knapsack table with zeros
+		var knapsackTable = Array.init(
+			repeating: Array.init(repeating: 0, count: maxWeight+1),
+			count: supplies.count+1)
 		
-		// drinks and food, sorted by weight
-		var weightSortedDrinks: [Supply] = drinks.sorted { $0.weight < $1.weight }
-		weightSortedDrinks.insert((0, 0), at: 0)
-		
-		var weightSortedFoods: [Supply] = foods.sorted { $0.weight < $1.weight }
-		weightSortedFoods.insert((0, 0), at: 0)
-		
-		// look for data and find optimal value
-		for optimalDrink in optimalSortedDrinks {
-			drinksLoop:
-			for d in 0 ..< weightSortedDrinks.count {
-				var drinkWeight = optimalDrink.weight
-				var drinkDistance = optimalDrink.value
-				for di in d ..< weightSortedDrinks.count {
-					let drink = weightSortedDrinks[di]
-					// skip same items
-					if optimalDrink.weight == drink.weight && optimalDrink.value == drink.value {
-						continue
-					}
-					drinkWeight += drink.weight
-					drinkDistance += drink.value
-					if drinkWeight > maxWeight {
-						break drinksLoop
-					}
-					
-					for optimalFood in optimalSortedFoods {
-						foodsLoop:
-						for f in 0 ..< weightSortedFoods.count {
-							var foodWeight = optimalFood.weight
-							var foodDistance = optimalFood.value
-							for fi in f ..< weightSortedFoods.count {
-								let food = weightSortedFoods[fi]
-								// skip same items
-								if optimalFood.weight == food.weight && optimalFood.value == food.value {
-									continue
-								}
-								foodWeight += food.weight
-								foodDistance += food.value
-								if foodWeight + drinkWeight > maxWeight {
-									break foodsLoop
-								}
-								
-								let distance = min(foodDistance, drinkDistance)
-								if maxDistance < distance {
-									maxDistance = distance
-								}
-							}
-						}
-					}
+		for i in 1 ... supplies.count {
+			for j in 1 ... maxWeight {
+				if supplies[i-1].weight > j {
+					// not feet, take values from pre row
+					knapsackTable[i][j] = knapsackTable[i-1][j]
+				} else {
+					knapsackTable[i][j] = max(
+						supplies[i-1].value + knapsackTable[i-1][j-supplies[i-1].weight],
+						knapsackTable[i-1][j]
+					)
 				}
 			}
 		}
 		
-        return maxDistance
-    }
+		return knapsackTable
+	}
 }
